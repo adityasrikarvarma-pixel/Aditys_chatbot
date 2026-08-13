@@ -1,4 +1,5 @@
 streamlit
+pdf2image
 pdfplumber
 groq
 langchain-community
