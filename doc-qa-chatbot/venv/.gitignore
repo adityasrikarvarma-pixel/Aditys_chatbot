@@ -1,0 +1,6 @@
+venv/
+.env
+temp.pdf
+__pycache__/
+.chroma/
+doc-qa-chatbot/venv/
