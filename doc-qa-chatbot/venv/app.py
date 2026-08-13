@@ -1,12 +1,15 @@
 import streamlit as st
 import os
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import Chroma
+from langchain_core.prompts import ChatPromptTemplate
+
+# Corrected imports for retrieval chains in modern LangChain
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
 
 st.set_page_config(page_title="Document Q&A Chatbot")
 st.title("📚 Document Q&A Assistant")
