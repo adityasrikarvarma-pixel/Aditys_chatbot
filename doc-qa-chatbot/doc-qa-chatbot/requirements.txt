@@ -1,8 +1,6 @@
 streamlit
-langchain-core
+groq
 langchain-community
-langchain-openai
-langchain-text-splitters
+sentence-transformers
 chromadb
 pypdf
-python-dotenv
