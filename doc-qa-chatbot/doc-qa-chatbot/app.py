@@ -155,7 +155,7 @@ if uploaded_file:
                         try:
                             # Using llama-3.3-70b-versatile or llama3-8b-8192 for stability
                             response = client.chat.completions.create(
-                                model="llama-3.3-70b-versatile",
+                                model="llama-3.1-8b-instant",
                                 messages=[
                                     {
                                         "role": "system",
