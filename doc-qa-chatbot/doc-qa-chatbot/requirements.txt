@@ -12,3 +12,4 @@ sentence-transformers
 chromadb
 transformers
 huggingface-hub
+torchvision
