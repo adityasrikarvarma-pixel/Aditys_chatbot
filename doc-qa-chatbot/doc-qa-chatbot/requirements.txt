@@ -1,5 +1,5 @@
 streamlit
-groq
+ollama
 langchain
 langchain-community
 langchain-core
