@@ -118,7 +118,6 @@ def process_pdf(file_bytes):
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
 
-
 # ------------------------------------------------------------------------------
 # 4. Main App Flow
 # ------------------------------------------------------------------------------
@@ -130,7 +129,7 @@ if uploaded_file:
             vectorstore = process_pdf(uploaded_file.getvalue())
             st.success("✅ Document processed successfully!")
 
-            client = Groq(api_key=groq_api_key)
+            client = Groq(api_key=groq_api_key.strip())
 
             if "messages" not in st.session_state:
                 st.session_state.messages = []
@@ -153,31 +152,34 @@ if uploaded_file:
 
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        response = client.chat.completions.create(
-                            model="llama-3.1-8b-instant",
-                            messages=[
-                                {
-                                    "role": "system",
-                                    "content": (
-                                        "You are a helpful assistant. "
-                                        "Answer questions strictly based on the provided context."
-                                    ),
-                                },
-                                {
-                                    "role": "user",
-                                    "content": f"Context:\n{context}\n\nQuestion: {user_query}",
-                                },
-                            ],
-                        )
+                        try:
+                            # Using llama-3.3-70b-versatile or llama3-8b-8192 for stability
+                            response = client.chat.completions.create(
+                                model="llama-3.3-70b-versatile",
+                                messages=[
+                                    {
+                                        "role": "system",
+                                        "content": (
+                                            "You are a helpful assistant. "
+                                            "Answer questions strictly based on the provided context."
+                                        ),
+                                    },
+                                    {
+                                        "role": "user",
+                                        "content": f"Context:\n{context}\n\nQuestion: {user_query}",
+                                    },
+                                ],
+                            )
 
-                        answer = response.choices[0].message.content
-                        st.write(answer)
+                            answer = response.choices[0].message.content
+                            st.write(answer)
 
-                        st.session_state.messages.append(
-                            {"role": "assistant", "content": answer}
-                        )
+                            st.session_state.messages.append(
+                                {"role": "assistant", "content": answer}
+                            )
+                        except Exception as api_err:
+                            st.error(f"Groq API Error: {api_err}")
 
         except Exception as e:
-            st.error("An error occurred during processing:")
+            st.error("An error occurred during document processing:")
             st.exception(e)
-            
