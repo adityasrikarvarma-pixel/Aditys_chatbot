@@ -1,7 +1,19 @@
+import logging
 import os
+import warnings
+
+# ------------------------------------------------------------------------------
+# Suppress Hugging Face, Transformers & PyTorch Warning Logs
+# ------------------------------------------------------------------------------
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+warnings.filterwarnings("ignore")
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+
+import ollama
 import pdfplumber
 import streamlit as st
-import ollama
 
 # OCR & Image Processing Dependencies
 from pdf2image import convert_from_path
@@ -16,12 +28,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # ------------------------------------------------------------------------------
 # 1. Path Configurations
 # ------------------------------------------------------------------------------
-# Tesseract Path
 tesseract_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 if os.path.exists(tesseract_path):
     pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
-# Poppler Path
 poppler_path = (
     r"C:\poppler\Library\bin"
     if os.path.exists(r"C:\poppler\Library\bin")
@@ -129,7 +139,7 @@ if uploaded_file:
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        # Render chat history
+        # Render existing chat messages
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
@@ -150,7 +160,7 @@ if uploaded_file:
             with st.chat_message("assistant"):
                 with st.spinner("Ollama is generating an answer..."):
                     try:
-                        # Call local Ollama instance
+                        # Call local Ollama model
                         response = ollama.chat(
                             model="llama3.2",
                             messages=[
