@@ -5,6 +5,7 @@ pdf2image
 pytesseract
 pillow
 pypdf
+python-docx
 langchain-community
 langchain-huggingface
 langchain-text-splitters
