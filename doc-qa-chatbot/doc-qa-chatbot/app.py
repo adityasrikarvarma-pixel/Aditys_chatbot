@@ -1,12 +1,12 @@
 import os
 import pdfplumber
 import streamlit as st
+import ollama
 
 # OCR & Image Processing Dependencies
 from pdf2image import convert_from_path
 import pytesseract
 
-from groq import Groq
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
@@ -32,11 +32,10 @@ poppler_path = (
 # 2. UI Configuration
 # ------------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Free Doc Q&A", page_icon="📚", layout="centered"
+    page_title="Free Doc Q&A (Local Ollama)", page_icon="📚", layout="centered"
 )
-st.title("📚 Free Document Q&A (Direct Groq SDK)")
+st.title("📚 Local Document Q&A (Powered by Ollama)")
 
-groq_api_key = st.sidebar.text_input("Groq API Key", type="password")
 uploaded_file = st.file_uploader("Upload a PDF document", type="pdf")
 
 
@@ -118,68 +117,69 @@ def process_pdf(file_bytes):
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
 
+
 # ------------------------------------------------------------------------------
 # 4. Main App Flow
 # ------------------------------------------------------------------------------
 if uploaded_file:
-    if not groq_api_key:
-        st.warning("⚠️ Please enter your Groq API Key in the sidebar to proceed.")
-    else:
-        try:
-            vectorstore = process_pdf(uploaded_file.getvalue())
-            st.success("✅ Document processed successfully!")
+    try:
+        vectorstore = process_pdf(uploaded_file.getvalue())
+        st.success("✅ Document processed successfully!")
 
-            client = Groq(api_key=groq_api_key.strip())
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
+        # Render chat history
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
 
-            for msg in st.session_state.messages:
-                with st.chat_message(msg["role"]):
-                    st.write(msg["content"])
+        user_query = st.chat_input("Ask something about your document...")
 
-            user_query = st.chat_input("Ask something about your document...")
+        if user_query:
+            st.session_state.messages.append(
+                {"role": "user", "content": user_query}
+            )
+            with st.chat_message("user"):
+                st.write(user_query)
 
-            if user_query:
-                st.session_state.messages.append(
-                    {"role": "user", "content": user_query}
-                )
-                with st.chat_message("user"):
-                    st.write(user_query)
+            # Similarity search from Chroma vector store
+            results = vectorstore.similarity_search(user_query, k=3)
+            context = "\n\n".join([doc.page_content for doc in results])
 
-                results = vectorstore.similarity_search(user_query, k=3)
-                context = "\n\n".join([doc.page_content for doc in results])
+            with st.chat_message("assistant"):
+                with st.spinner("Ollama is generating an answer..."):
+                    try:
+                        # Call local Ollama instance
+                        response = ollama.chat(
+                            model="llama3.2",
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": (
+                                        "You are a helpful assistant. "
+                                        "Answer questions strictly based on the provided context."
+                                    ),
+                                },
+                                {
+                                    "role": "user",
+                                    "content": f"Context:\n{context}\n\nQuestion: {user_query}",
+                                },
+                            ],
+                        )
 
-                with st.chat_message("assistant"):
-                    with st.spinner("Thinking..."):
-                        try:
-                            # Using llama-3.3-70b-versatile or llama3-8b-8192 for stability
-                            response = client.chat.completions.create(
-                                model="llama-3.1-8b-instant",
-                                messages=[
-                                    {
-                                        "role": "system",
-                                        "content": (
-                                            "You are a helpful assistant. "
-                                            "Answer questions strictly based on the provided context."
-                                        ),
-                                    },
-                                    {
-                                        "role": "user",
-                                        "content": f"Context:\n{context}\n\nQuestion: {user_query}",
-                                    },
-                                ],
-                            )
+                        answer = response["message"]["content"]
+                        st.write(answer)
 
-                            answer = response.choices[0].message.content
-                            st.write(answer)
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": answer}
+                        )
+                    except Exception as ollama_err:
+                        st.error(
+                            f"Ollama Connection Error: {str(ollama_err)}\n\n"
+                            "Make sure Ollama is running on your PC and you pulled the model (`ollama pull llama3.2`)."
+                        )
 
-                            st.session_state.messages.append(
-                                {"role": "assistant", "content": answer}
-                            )
-                        except Exception as api_err:
-                            st.error(f"Groq API Error: {api_err}")
-
-        except Exception as e:
-            st.error("An error occurred during document processing:")
-            st.exception(e)
+    except Exception as e:
+        st.error("An error occurred during processing:")
+        st.exception(e)
